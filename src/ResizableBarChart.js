@@ -56,8 +56,39 @@ export default class ResizableBarChart extends React.Component {
   constructor(props) {
     super(props);
     this.state = { 
-
+      addingBucket : false,
+      newBucketName : '',
+      buckets : this.props.data 
     }    
+
+    this.handleBucketNameChange = this.handleBucketNameChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleBucketNameChange(event) {
+    this.setState({newBucketName: event.target.value});
+  }
+
+  handleSubmit(addMe) {
+    if (addMe)    
+      this.addBucket(this.state.newBucketName);
+    this.setState(() => ({addingBucket: false}))
+  }
+
+  addBucketReq(){
+    this.setState(() => ({addingBucket: true}))
+  }
+
+  addBucket(bucketName){
+    let newBucket = {      
+      amount: 0
+    }
+    newBucket.name = bucketName;
+    let buckets = this.state.buckets;   
+
+    buckets.push(newBucket);
+    
+    this.setState(() => ({buckets: buckets}));
   }
 
   renderLines() {
@@ -69,11 +100,11 @@ export default class ResizableBarChart extends React.Component {
     ))
   }
 
-  renderBuckets(buckets, parentId, mouseDown, resizeBucket, checkAlternate) {
+  renderBuckets(buckets, mouseDown, resizeBucket, checkAlternate) {
 
     let bucketCount = buckets.length;
 
-    return buckets.map((bucket) => {
+    return buckets.map((bucket, index) => {
       const percent = (bucket.amount) * 100;
       const bucketWidth = (100 / bucketCount) / 2;
       const hasChildren = ((bucket.children) && (bucket.children.length > 0));
@@ -82,9 +113,8 @@ export default class ResizableBarChart extends React.Component {
         <Bucket
           percent={percent}
           width={bucketWidth}
-          key={bucket.name}        
-          parentId={parentId}  
-          mouseDown={ () => mouseDown(parentId, bucket)}
+          key={index}        
+          mouseDown={ () => mouseDown(bucket)}
           hasChildren={hasChildren}
           isAlternate={isAlternate}
           resizeBucket={ (delta) => resizeBucket(delta, bucket, this.chartElement.clientHeight) }
@@ -99,20 +129,24 @@ export default class ResizableBarChart extends React.Component {
         <div className='rbc-container' ref={ (chartElement) => this.chartElement = chartElement}>
           { this.renderLines() }
 
-          { this.renderBuckets(
-              this.props.buckets, 
-              this.props.ancestors, 
+          { this.state.buckets && this.renderBuckets(
+              this.state.buckets, 
               this.props.mouseDown, 
               this.props.resizeBucket,
               this.props.checkAlternate
               ) }
-              <Button onClick={() => {this.props.newBucketReq()}} style={{position : 'absolute', left: '95%'}}>+</Button>
+          { !this.state.addingBucket &&
+            <Button onClick={() => {this.addBucketReq()}} style={{position : 'absolute', left: '95%'}}>+</Button>}
+          {this.state.addingBucket && <div className='rbc-form'>
+            <label>New Name:<input type='text' className='rbc-in' value={this.state.newBucketName} onChange={this.handleBucketNameChange}></input></label>
+            <Button onClick={() => this.handleSubmit(true)}>Save</Button>
+            <Button onClick={() => this.handleSubmit(false)}>Cancel</Button>            
+          </div>}
         </div>
-        <BucketTextContent 
-          buckets = {this.props.buckets} 
+        {this.state.buckets && <BucketTextContent 
+          buckets = {this.state.buckets} 
           bucketOptions = {this.props.bucketOptions}
-
-        />
+        /> }
       </div>
     )
   }
